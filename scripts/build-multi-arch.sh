@@ -47,8 +47,7 @@ if [[ "$PUSH" == "true" ]]; then
   "$PODMAN_BIN" manifest push "$MANIFEST_NAME" "$IMAGE_TAG"
   if [[ "$PUSH_LATEST" == "true" ]]; then
     LATEST_TAG="${IMAGE_TAG%:*}:latest"
-    echo "Also tagging and pushing $LATEST_TAG"
-    "$PODMAN_BIN" manifest tag "$MANIFEST_NAME" "$LATEST_TAG"
+    echo "Also pushing $LATEST_TAG"
     "$PODMAN_BIN" manifest push "$MANIFEST_NAME" "$LATEST_TAG"
   fi
   if [[ "$CLEANUP_MANIFEST" == "true" ]]; then
