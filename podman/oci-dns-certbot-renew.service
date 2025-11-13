@@ -1,0 +1,17 @@
+[Unit]
+Description=Renew Let's Encrypt certificates via Certbot+OCI DNS (Podman)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/oci-dns-certbot.env
+ExecStart=/usr/bin/podman run --rm \
+  --name oci-dns-certbot \
+  --env-file /etc/oci-dns-certbot.env \
+  -v /srv/oci-certbot/etc-letsencrypt:/etc/letsencrypt \
+  -v /srv/oci-certbot/lib-letsencrypt:/var/lib/letsencrypt \
+  -v /srv/oci-certbot/log-letsencrypt:/var/log/letsencrypt \
+  -v /srv/oci-certbot/export:/export \
+  -v /etc/oci-dns-certbot/secrets:/secrets:ro \
+  docker.io/aljosavister/oci-dns-certbot:latest

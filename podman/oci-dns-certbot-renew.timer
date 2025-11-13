@@ -1,0 +1,10 @@
+[Unit]
+Description=Run OCI Certbot renewal daily
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+Unit=oci-dns-certbot-renew.service
+
+[Install]
+WantedBy=timers.target
