@@ -80,6 +80,8 @@ This container runs as a short-lived job: it issues/renews certificates, copies 
   Adjust the volume paths or image tag inside the service file if you changed them during setup. The timer fires daily; Certbot only renews when certificates are near expiry.
 - Mount `/srv/oci-certbot/export` into dependent containers as read-only so they can consume the latest certs.
 - Certbot’s success message references `/etc/letsencrypt/live/...` inside the container; on the host that directory is your bind mount (`/srv/oci-certbot/etc-letsencrypt/live/...`) and the deploy hook copies `public.crt` / `private.key` into `/srv/oci-certbot/export` for convenience.
+- Logs persist under `/srv/oci-certbot/log-letsencrypt`. Inspect them with `sudo tail -f /srv/oci-certbot/log-letsencrypt/letsencrypt.log` or by running `sudo podman logs oci-dns-certbot` immediately after a manual run.
+- For systemd-managed runs, use `sudo journalctl -u oci-dns-certbot-renew.service -u oci-dns-certbot-renew.timer -f` to follow the timer/service logs.
 
 ## Support
 Issues and feature requests: https://github.com/aljosavister/oci-dns-certbot
