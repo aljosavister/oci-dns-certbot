@@ -5,6 +5,7 @@ PODMAN_BIN=${PODMAN_BIN:-podman}
 BUILDER_NAME=${BUILDER_NAME:-oci-dns-certbot-builder}
 PLATFORMS=${PLATFORMS:-linux/amd64,linux/arm64}
 IMAGE_TAG=${IMAGE_TAG:-${1:-}}
+PUSH_LATEST=${PUSH_LATEST:-false}
 BUILD_CONTEXT=${BUILD_CONTEXT:-.}
 PUSH=${PUSH:-true}
 
@@ -44,6 +45,12 @@ echo "Running: ${BUILD_CMD[*]}"
 if [[ "$PUSH" == "true" ]]; then
   echo "Pushing manifest $MANIFEST_NAME to $IMAGE_TAG"
   "$PODMAN_BIN" manifest push "$MANIFEST_NAME" "$IMAGE_TAG"
+  if [[ "$PUSH_LATEST" == "true" ]]; then
+    LATEST_TAG="${IMAGE_TAG%:*}:latest"
+    echo "Also tagging and pushing $LATEST_TAG"
+    "$PODMAN_BIN" manifest tag "$MANIFEST_NAME" "$LATEST_TAG"
+    "$PODMAN_BIN" manifest push "$MANIFEST_NAME" "$LATEST_TAG"
+  fi
   if [[ "$CLEANUP_MANIFEST" == "true" ]]; then
     "$PODMAN_BIN" manifest rm "$MANIFEST_NAME" >/dev/null 2>&1 || true
   fi

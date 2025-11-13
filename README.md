@@ -32,12 +32,13 @@ Set `IMAGE_TAG` to the desired version before running. The script wraps `podman 
 - `BUILD_CONTEXT` – defaults to `.`
 - `PUSH` – set to `false` for local single-arch testing (requires `PLATFORMS` to contain one value)
 - `MANIFEST_NAME` – override the temporary manifest reference (default `oci-dns-certbot-manifest`)
+- `PUSH_LATEST` – set to `true` to push the same manifest to a `:latest` tag alongside your versioned tag
 - `CLEANUP_MANIFEST` – disable cleanup by setting `false`
 - `BUILDER_NAME`, `PODMAN_BIN` – customize the buildx builder or Podman binary
 
 ## Hooks and entrypoint
 - `hooks/auth.sh` and `hooks/cleanup.sh` shell out to Lexicon’s OCI provider. They read `CERTBOT_DOMAIN`, `CERTBOT_VALIDATION`, respect `CERTBOT_MANUAL_PROPAGATION_SECONDS`, and default to `/etc/letsencrypt` for the Lexicon config.
-- `hooks/deploy.sh` copies the renewed certificate/key pair into `/export`, handles ownership adjustments via `CERT_EXPORT_UID/GID`, and executes `POST_RENEW_COMMAND` when set.
+- `hooks/deploy.sh` copies the renewed certificate/key pair into `/export` (unless `CERT_EXPORT_ENABLED=false`), handles ownership adjustments via `CERT_EXPORT_UID/GID`, and executes `POST_RENEW_COMMAND` when set.
 - `entrypoint.sh` is responsible for:
   - Parsing `CERT_DOMAINS` and optional `CERT_PRIMARY_DOMAIN`
   - Writing `lexicon_oci.yml` from environment variables (unless already present)

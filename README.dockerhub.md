@@ -26,6 +26,7 @@ Container image that renews Let's Encrypt certificates for private services by s
    OCI_AUTH_REGION=eu-frankfurt-1
    OCI_AUTH_COMPARTMENT=ocid1.compartment.oc1..example
    OCI_AUTH_KEY_FILE=/secrets/oci_api_key.pem
+   CERT_EXPORT_ENABLED=true
    CERT_EXPORT_PATH=/export
    CERT_EXPORT_PUBLIC_NAME=public.crt
    CERT_EXPORT_PRIVATE_NAME=private.key
@@ -65,7 +66,7 @@ sudo docker run --rm \
   -v /etc/oci-dns-certbot/secrets:/secrets:ro \
   docker.io/aljosavister/oci-dns-certbot:latest
 ```
-Leave `CERTBOT_DRY_RUN=true` for the first run; once you see "The dry run was successful", remove it to issue production certificates. The deploy hook writes `public.crt` / `private.key` inside the export directory after each renewal.
+Leave `CERTBOT_DRY_RUN=true` for the first run; once you see "The dry run was successful", remove it to issue production certificates. Set `CERT_EXPORT_ENABLED=false` if you do not need the deploy hook to copy `public.crt` / `private.key` into the export directory after each renewal.
 This container runs as a short-lived job: it issues/renews certificates, copies files into the mounted directories, then exits. Schedule it via systemd/cron (see below) to check daily—Certbot skips work when certificates are still valid.
 
 ## Automation
