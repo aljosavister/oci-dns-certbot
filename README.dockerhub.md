@@ -70,6 +70,14 @@ This container runs as a short-lived job: it issues/renews certificates, copies 
 
 ## Automation
 - `podman/oci-dns-certbot-renew.service` and `.timer` show how to schedule daily renewals via systemd.
+- On Oracle Linux/RHEL-like hosts, install the timer/service as follows:
+  ```bash
+  sudo cp podman/oci-dns-certbot-renew.service /etc/systemd/system/
+  sudo cp podman/oci-dns-certbot-renew.timer /etc/systemd/system/
+  sudo systemctl daemon-reload
+  sudo systemctl enable --now oci-dns-certbot-renew.timer
+  ```
+  Adjust the volume paths or image tag inside the service file if you changed them during setup. The timer fires daily; Certbot only renews when certificates are near expiry.
 - Mount `/srv/oci-certbot/export` into dependent containers as read-only so they can consume the latest certs.
 - Certbot’s success message references `/etc/letsencrypt/live/...` inside the container; on the host that directory is your bind mount (`/srv/oci-certbot/etc-letsencrypt/live/...`) and the deploy hook copies `public.crt` / `private.key` into `/srv/oci-certbot/export` for convenience.
 
