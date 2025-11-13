@@ -20,26 +20,14 @@ podman/*.service|*.timer           # Sample systemd units for scheduled renewals
 - Access to an OCI tenancy for integration tests (optional)
 - Bash, GNU coreutils, and `make`-style tooling if you script against these files
 
-## Local image build
-```bash
-podman build -t docker.io/aljosavister/oci-dns-certbot:dev .
-```
-Run the container locally with the helper script (uses bind-mounted `state/` directories under the repo):
-```bash
-CERTBOT_DRY_RUN=true \
-IMAGE_REF=docker.io/aljosavister/oci-dns-certbot:dev \
-./scripts/run-once.sh
-```
-Provide a populated `config/env.example` copy plus a mock `/secrets/oci_api_key.pem` to test successful execution (Lexicon will fail without real OCI creds, so use `CERTBOT_DRY_RUN=true`).
-
-## Multi-architecture publishing
-`./scripts/build-multi-arch.sh` wraps `podman buildx` + `podman manifest push` so you can release both `linux/amd64` and `linux/arm64` layers:
+## Publishing to Docker Hub
+Use the buildx helper to build and push multi-arch manifests (linux/amd64 + linux/arm64):
 ```bash
 podman login docker.io
 IMAGE_TAG=docker.io/aljosavister/oci-dns-certbot:1.0.1 \
   ./scripts/build-multi-arch.sh
 ```
-Environment variables:
+Set `IMAGE_TAG` to the desired version before running. The script wraps `podman buildx build --manifest ...` followed by `podman manifest push`, so it works across Podman versions. Environment variables you can customize:
 - `PLATFORMS` – comma-separated targets (default `linux/amd64,linux/arm64`)
 - `BUILD_CONTEXT` – defaults to `.`
 - `PUSH` – set to `false` for local single-arch testing (requires `PLATFORMS` to contain one value)

@@ -66,10 +66,12 @@ sudo docker run --rm \
   docker.io/aljosavister/oci-dns-certbot:latest
 ```
 Leave `CERTBOT_DRY_RUN=true` for the first run; once you see "The dry run was successful", remove it to issue production certificates. The deploy hook writes `public.crt` / `private.key` inside the export directory after each renewal.
+This container runs as a short-lived job: it issues/renews certificates, copies files into the mounted directories, then exits. Schedule it via systemd/cron (see below) to check daily—Certbot skips work when certificates are still valid.
 
 ## Automation
 - `podman/oci-dns-certbot-renew.service` and `.timer` show how to schedule daily renewals via systemd.
 - Mount `/srv/oci-certbot/export` into dependent containers as read-only so they can consume the latest certs.
+- Certbot’s success message references `/etc/letsencrypt/live/...` inside the container; on the host that directory is your bind mount (`/srv/oci-certbot/etc-letsencrypt/live/...`) and the deploy hook copies `public.crt` / `private.key` into `/srv/oci-certbot/export` for convenience.
 
 ## Support
 Issues and feature requests: https://github.com/aljosavister/oci-dns-certbot

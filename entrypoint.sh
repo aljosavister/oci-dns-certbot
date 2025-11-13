@@ -111,4 +111,19 @@ fi
 
 CMD+=("${DOMAIN_FLAGS[@]}")
 
-exec "${CMD[@]}"
+"${CMD[@]}"
+EXIT_CODE=$?
+
+if [[ $EXIT_CODE -eq 0 ]]; then
+  echo ""
+  echo "Certificates stored inside the container at: ${CERTBOT_CONFIG_DIR}/live/${PRIMARY_DOMAIN}"
+  echo "Remember this directory maps to the host path you mounted to ${CERTBOT_CONFIG_DIR}."
+  if [[ "${CERT_EXPORT_ENABLED:-true}" == "true" ]]; then
+    PUBLIC_NAME=${CERT_EXPORT_PUBLIC_NAME:-public.crt}
+    PRIVATE_NAME=${CERT_EXPORT_PRIVATE_NAME:-private.key}
+    echo "Deploy hook copied the files inside the container to: ${CERT_EXPORT_PATH:-/export}/${PUBLIC_NAME} and ${CERT_EXPORT_PATH:-/export}/${PRIVATE_NAME}"
+    echo "Those paths align with the host directory you mounted to ${CERT_EXPORT_PATH:-/export}."
+  fi
+fi
+
+exit $EXIT_CODE
