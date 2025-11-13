@@ -18,14 +18,24 @@ if [[ ! -d "${CERT_EXPORT_PATH}" ]]; then
   exit 0
 fi
 
-: "${CERTBOT_FULLCHAIN_PATH:?CERTBOT_FULLCHAIN_PATH not provided}"
-: "${CERTBOT_PRIVKEY_PATH:?CERTBOT_PRIVKEY_PATH not provided}"
+FULLCHAIN_PATH=${CERTBOT_FULLCHAIN_PATH:-}
+PRIVKEY_PATH=${CERTBOT_PRIVKEY_PATH:-}
 
-install -D -m 0644 "${CERTBOT_FULLCHAIN_PATH}" "${CERT_EXPORT_PATH}/${CERT_EXPORT_PUBLIC_NAME}"
-install -D -m 0640 "${CERTBOT_PRIVKEY_PATH}" "${CERT_EXPORT_PATH}/${CERT_EXPORT_PRIVATE_NAME}"
+if [[ -z "$FULLCHAIN_PATH" || -z "$PRIVKEY_PATH" ]]; then
+  if [[ -n "${RENEWED_LINEAGE:-}" ]]; then
+    FULLCHAIN_PATH="${RENEWED_LINEAGE}/fullchain.pem"
+    PRIVKEY_PATH="${RENEWED_LINEAGE}/privkey.pem"
+  else
+    echo "[deploy] cert/key paths missing (CERTBOT_FULLCHAIN_PATH or RENEWED_LINEAGE not provided)" >&2
+    exit 1
+  fi
+fi
+
+install -D -m 0644 "${FULLCHAIN_PATH}" "${CERT_EXPORT_PATH}/${CERT_EXPORT_PUBLIC_NAME}"
+install -D -m 0640 "${PRIVKEY_PATH}" "${CERT_EXPORT_PATH}/${CERT_EXPORT_PRIVATE_NAME}"
 
 if [[ -n "${CERT_EXPORT_UID}" || -n "${CERT_EXPORT_GID}" ]]; then
-  chown "${CERT_EXPORT_UID:-}"":"${CERT_EXPORT_GID:-}" \
+  chown "${CERT_EXPORT_UID:-}:${CERT_EXPORT_GID:-}" \
     "${CERT_EXPORT_PATH}/${CERT_EXPORT_PUBLIC_NAME}" \
     "${CERT_EXPORT_PATH}/${CERT_EXPORT_PRIVATE_NAME}"
 fi
