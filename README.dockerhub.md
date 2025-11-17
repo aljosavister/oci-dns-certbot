@@ -35,14 +35,20 @@ Container image that renews Let's Encrypt certificates for private services by s
    POST_RENEW_COMMAND=
    CERTBOT_DRY_RUN=true  # remove after the first successful test
    ```
-2. Place your OCI API key at `/etc/oci-dns-certbot/secrets/oci_api_key.pem` (chmod 600) and ensure the IAM policy allows DNS zone writes.
-3. Create persistent directories for Certbot state and exported certs:
+2. Create persistent directories for Certbot state and exported certs:
    ```bash
    sudo mkdir -p /srv/oci-certbot/{etc-letsencrypt,lib-letsencrypt,log-letsencrypt,export}
    sudo mkdir -p /etc/oci-dns-certbot/secrets
    sudo chcon -Rt container_file_t /srv/oci-certbot /etc/oci-dns-certbot/secrets  # on SELinux hosts
    ```
+3. Place your OCI API key at `/etc/oci-dns-certbot/secrets/oci_api_key.pem` (chmod 600) and ensure the IAM policy allows DNS zone writes.
+   ```bash
+   sudo nano /etc/oci-dns-certbot/secrets/oci_api_key.pem
+   ```
 
+   ```bash
+   sudo chmod 600 /etc/oci-dns-certbot/secrets/oci_api_key.pem
+   ```
 ## Running manually
 Podman (recommended):
 ```bash
@@ -73,12 +79,20 @@ This container runs as a short-lived job: it issues/renews certificates, copies 
 
 ## Automation
 - `podman/oci-dns-certbot-renew.service` and `.timer` show how to schedule daily renewals via systemd.
-- On Oracle Linux/RHEL-like hosts, install the timer/service as follows:
+- On Oracle Linux/RHEL-like hosts, you can use a sample for the timer/service from repository for service `podman/oci-dns-certbot-renew.service` and timer `podman/oci-dns-certbot-renew.timer`:
   ```bash
-  sudo cp podman/oci-dns-certbot-renew.service /etc/systemd/system/
-  sudo cp podman/oci-dns-certbot-renew.timer /etc/systemd/system/
+  sudo nano /etc/systemd/system/oci-dns-certbot-renew.service
+  ```
+  ```bash
+  sudo nano /etc/systemd/system/oci-dns-certbot-renew.timer
+  ```
+  ```bash
   sudo systemctl daemon-reload
   sudo systemctl enable --now oci-dns-certbot-renew.timer
+  ```
+  Run manually from systemd:
+  ```bash
+  sudo systemctl start oci-dns-certbot-renew
   ```
   Adjust the volume paths or image tag inside the service file if you changed them during setup. The service already uses `:Z` relabels on the host mounts so Podman can access them under SELinux. The timer fires daily; Certbot only renews when certificates are near expiry.
 - Mount `/srv/oci-certbot/export` into dependent containers as read-only so they can consume the latest certs.
