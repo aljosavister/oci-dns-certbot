@@ -79,18 +79,19 @@ This container runs as a short-lived job: it issues/renews certificates, copies 
 
 ## Automation
 - `podman/oci-dns-certbot-renew.service` and `.timer` show how to schedule daily renewals via systemd.
-- On Oracle Linux/RHEL-like hosts, you can use a sample for the timer/service from repository for service `podman/oci-dns-certbot-renew.service` and timer `podman/oci-dns-certbot-renew.timer`:
+- On Oracle Linux and other RHEL-style hosts, copy the sample unit files from `podman/oci-dns-certbot-renew.service` and `podman/oci-dns-certbot-renew.timer`, then create matching units under `/etc/systemd/system`:
   ```bash
   sudo nano /etc/systemd/system/oci-dns-certbot-renew.service
   ```
   ```bash
   sudo nano /etc/systemd/system/oci-dns-certbot-renew.timer
   ```
+  After saving the files, reload systemd and enable the timer so it starts immediately:
   ```bash
   sudo systemctl daemon-reload
   sudo systemctl enable --now oci-dns-certbot-renew.timer
   ```
-  Run manually from systemd:
+  To kick off a renewal job on demand:
   ```bash
   sudo systemctl start oci-dns-certbot-renew
   ```
