@@ -1,5 +1,3 @@
-![UNS OpenHub](https://www.uns-openhub.com/assets/logo-mark.svg)
-
 # OCI DNS Certbot (Podman/Docker)
 
 Container image that renews Let's Encrypt certificates for private services by solving DNS-01 challenges against Oracle Cloud (OCI) DNS via Lexicon. Run it on any host with Podman or Docker, mount your Let’s Encrypt directories plus the OCI API key, and it will copy renewed certs into a shared export volume for other workloads.
