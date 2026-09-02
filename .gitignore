@@ -1,0 +1,5 @@
+state/
+export/
+secrets/
+config/*.env
+!config/env.example

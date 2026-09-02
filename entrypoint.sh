@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# The generated Lexicon configuration contains OCI identifiers and must not be
+# readable by other users in the container or on a bind-mounted host directory.
+umask 077
+
 # Default directories (override with env vars if needed)
 CERTBOT_CONFIG_DIR=${CERTBOT_CONFIG_DIR:-/etc/letsencrypt}
 CERTBOT_WORK_DIR=${CERTBOT_WORK_DIR:-/var/lib/letsencrypt}
@@ -26,13 +30,8 @@ require_env() {
 
 # Parse domains from CERT_DOMAINS (comma/space separated)
 require_env CERT_DOMAINS
-IFS=',' read -ra RAW_DOMAINS <<< "$CERT_DOMAINS"
-DOMAINS=()
-for raw in "${RAW_DOMAINS[@]}"; do
-  trimmed=$(echo "$raw" | xargs)
-  [[ -z "$trimmed" ]] && continue
-  DOMAINS+=("$trimmed")
-done
+DOMAIN_INPUT=${CERT_DOMAINS//,/ }
+read -r -a DOMAINS <<< "$DOMAIN_INPUT"
 
 if [[ ${#DOMAINS[@]} -eq 0 ]]; then
   echo "CERT_DOMAINS did not contain any valid domains" >&2
@@ -63,6 +62,7 @@ auth_compartment: ${OCI_AUTH_COMPARTMENT}
 auth_key_file: ${OCI_AUTH_KEY_FILE}
 ttl: ${LEXICON_TTL:-60}
 EOF_CONF
+  chmod 0600 "$LEXICON_CONFIG_PATH"
 fi
 
 export LEXICON_CONFIG_DIR="$(dirname "$LEXICON_CONFIG_PATH")"
@@ -101,6 +101,12 @@ fi
 
 if [[ "${CERTBOT_DRY_RUN:-false}" == "true" ]]; then
   CMD+=(--dry-run)
+fi
+
+# Certbot deliberately skips deploy hooks during --dry-run unless this flag is
+# supplied. Keep it opt-in because the hook copies the active certificate.
+if [[ "${CERTBOT_RUN_DEPLOY_HOOKS:-false}" == "true" ]]; then
+  CMD+=(--run-deploy-hooks)
 fi
 
 if [[ -n "${CERTBOT_EXTRA_ARGS:-}" ]]; then

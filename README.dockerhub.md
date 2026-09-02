@@ -6,7 +6,7 @@ Container image that renews Let's Encrypt certificates for private services by s
 - Works completely inside a container (no host Python/Certbot install)
 - Automates OCI DNS TXT record management via dns-lexicon hooks
 - Copies `fullchain.pem` / `privkey.pem` into a bind-mounted export directory every renewal
-- Optional post-renew command (e.g., reload another container)
+- Optional host-side post-renew command (e.g., reload another container)
 - Systemd timer/service examples for unattended scheduling
 
 ## Requirements
@@ -32,8 +32,15 @@ Container image that renews Let's Encrypt certificates for private services by s
    CERT_EXPORT_PRIVATE_NAME=private.key
    CERT_EXPORT_UID=
    CERT_EXPORT_GID=
-   POST_RENEW_COMMAND=
-   CERTBOT_DRY_RUN=true  # remove after the first successful test
+   CERT_EXPORT_PUBLIC_MODE=0644
+   CERT_EXPORT_PRIVATE_MODE=0640
+   CERT_EXPORT_DEPLOY_MARKER=.oci-dns-certbot-deployed
+   HOST_CERT_EXPORT_PATH=/srv/oci-certbot/export
+   HOST_POST_RENEW_COMMAND=
+   # Keep this true for the first DNS/issuance test, then set it to false.
+   CERTBOT_DRY_RUN=true
+   # Set true only when testing the deploy/export hook itself during dry-run.
+   CERTBOT_RUN_DEPLOY_HOOKS=false
    ```
 2. Create persistent directories for Certbot state and exported certs:
    ```bash
@@ -60,7 +67,7 @@ sudo podman run --rm \
   -v /srv/oci-certbot/log-letsencrypt:/var/log/letsencrypt:Z \
   -v /srv/oci-certbot/export:/export:Z \
   -v /etc/oci-dns-certbot/secrets:/secrets:ro,Z \
-  docker.io/aljosavister/oci-dns-certbot:latest
+  docker.io/unsopenhub/oci-dns-certbot:latest
 ```
 Docker:
 ```bash
@@ -72,9 +79,11 @@ sudo docker run --rm \
   -v /srv/oci-certbot/log-letsencrypt:/var/log/letsencrypt \
   -v /srv/oci-certbot/export:/export \
   -v /etc/oci-dns-certbot/secrets:/secrets:ro \
-  docker.io/aljosavister/oci-dns-certbot:latest
+  docker.io/unsopenhub/oci-dns-certbot:latest
 ```
-Leave `CERTBOT_DRY_RUN=true` for the first run; once you see "The dry run was successful", remove it to issue production certificates. Set `CERT_EXPORT_ENABLED=false` if you do not need the deploy hook to copy `public.crt` / `private.key` into the export directory after each renewal. Use `CERT_EXPORT_UID` / `CERT_EXPORT_GID` to adjust ownership (e.g., set `CERT_EXPORT_GID=caddy` so a host service can read the files immediately).
+Leave `CERTBOT_DRY_RUN=true` for the first run; once you see "The dry run was successful", set it to `false` to issue production certificates. Certbot skips deploy hooks during a dry-run unless `CERTBOT_RUN_DEPLOY_HOOKS=true`; when enabled, Certbot deploys the current active certificate rather than its temporary staging certificate. Set `CERT_EXPORT_ENABLED=false` only when you do not need export or a host post-renew command. `CERT_EXPORT_UID` and `CERT_EXPORT_GID` must be numeric host IDs, for example `1000`; group names such as `caddy` are resolved inside the image and are not portable.
+The deploy hook writes `CERT_EXPORT_DEPLOY_MARKER` only after both exported files are fully written. `HOST_POST_RENEW_COMMAND` runs on the host only when that marker exists, then consumes it. This permits `podman exec …` or `systemctl reload …` without mounting a container-engine socket into the certificate image. `POST_RENEW_COMMAND` remains a deprecated compatibility alias for the host command.
+When using the direct `podman run` or `docker run` examples, invoke `oci-dns-certbot-post-renew.sh` on the host afterwards if you configure a host post-renew command. The supplied systemd service and `scripts/run-once.sh` do this automatically.
 This container runs as a short-lived job: it issues/renews certificates, copies files into the mounted directories, then exits. Schedule it via systemd/cron (see below) to check daily—Certbot skips work when certificates are still valid.
 
 ## Automation
@@ -86,6 +95,10 @@ This container runs as a short-lived job: it issues/renews certificates, copies 
   ```bash
   sudo nano /etc/systemd/system/oci-dns-certbot-renew.timer
   ```
+  Install the host-side post-renew helper next to the units. It executes `HOST_POST_RENEW_COMMAND` only after an actual certificate export; leave the setting empty if no reload is required.
+  ```bash
+  sudo install -D -m 0755 podman/oci-dns-certbot-post-renew.sh /usr/local/libexec/oci-dns-certbot-post-renew
+  ```
   After saving the files, reload systemd and enable the timer so it starts immediately:
   ```bash
   sudo systemctl daemon-reload
@@ -95,7 +108,7 @@ This container runs as a short-lived job: it issues/renews certificates, copies 
   ```bash
   sudo systemctl start oci-dns-certbot-renew
   ```
-  Adjust the volume paths or image tag inside the service file if you changed them during setup. The service already uses `:Z` relabels on the host mounts so Podman can access them under SELinux. The timer fires daily; Certbot only renews when certificates are near expiry.
+  Adjust the volume paths, `HOST_CERT_EXPORT_PATH`, or image tag inside the service file if you changed them during setup. The service already uses `:Z` relabels on the host mounts so Podman can access them under SELinux. The timer fires daily; Certbot only renews when certificates are near expiry.
 - Mount `/srv/oci-certbot/export` into dependent containers as read-only so they can consume the latest certs.
 - Certbot’s success message references `/etc/letsencrypt/live/...` inside the container; on the host that directory is your bind mount (`/srv/oci-certbot/etc-letsencrypt/live/...`) and the deploy hook copies `public.crt` / `private.key` into `/srv/oci-certbot/export` for convenience.
 - Logs persist under `/srv/oci-certbot/log-letsencrypt`. Inspect them with `sudo tail -f /srv/oci-certbot/log-letsencrypt/letsencrypt.log` or by running `sudo podman logs oci-dns-certbot` immediately after a manual run.

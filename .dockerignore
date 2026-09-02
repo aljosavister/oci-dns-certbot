@@ -1,0 +1,7 @@
+.git/
+state/
+export/
+secrets/
+config/*.env
+*.pem
+*.key
